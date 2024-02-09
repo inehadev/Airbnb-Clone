@@ -1,56 +1,81 @@
 const express = require("express");
-const user = require('./models/user');
+const User = require('../backend/models/user')
 const UserRouter = express.Router();
 const bcrypt = require ('bcrypt');
-const token = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
+const  userVerify  = require("./middleware/user");
 
-UserRouter.post('/register' , async(req,res)=>{
+
+
+ UserRouter.post("/register" , async(req,res)=>{
   try {
     const{username , email , password} = req.body;
-    const existinguser = await user.findOne({email});
+    const existinguser = await User.findOne({email});
     if(existinguser){
-        return res.status(400).json("email is already register try with another email");
+        return res.status(400).json({message:"email is already register try with another email"});
     }
       
-    const hashpassword = bcrypt.hash(password , 10);
+    const hashpassword = await bcrypt.hash(password , 10);
 
-     let User = new user ({
+     let user  = new User ({
         username ,
         email,
         password:hashpassword
      })
 
-     User = await User.save();
-     res.json(User);
+     user = await user.save();
+     res.json(user);
     
   } catch (error) {
-    console.log(err);
+    console.log(error);
   }
 
 })
 
-
-UserRouter.post('/login' , async(req,res)=>{
+UserRouter.post('/login', async (req, res) => {
     try {
-        const{email , password}=req.body;
-        const existinguser = await user.findOne({email});
-        if(!existinguser){
-            return res.status(405).json(`email is  not register create your account first`);
+        const {email , password} = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password are required." });
+        }
+
+        const existUser = await User.findOne({email});
+        if(!existUser){
+            console.log("Invalid email");
+            res.status(400).json({error:"Invalid Username"});
         }
         else{
-            return res.status(200).json(`user loginned successfully`);
-        }
-        const ismatch = bcrypt.compare(password , existinguser.password);
-        if(!ismatch){
-            res.json(`wrong password`);
-        }
+            const isMatch = await bcrypt.compare(password , existUser.password);
+            if(!isMatch){
+                console.log("Wrong Password");
+                res.status(400).json({error:"Invalid Password Try with another one"});
+            }
+            else{
+                const token =  jwt.sign({id:existUser._id} , "Securekey");
+                res.json({...existUser._doc , token})
 
-        const token =  jwt.sign({id: existinguser._id } , "securekey");
-        res.json(...existinguser._doc , token); 
+            }
+        }
     } catch (error) {
-       console.log(err);
-
+        console.log(error);
+        res.status(500).json({error:error.message});
     }
+
+    UserRouter.get('/profile' , userVerify, async (req,res)=>{
+        console.log("id is",req.token());
+            res.send("working");
+        
+    })
+});
+
+
+UserRouter.get("/profile" , userVerify , async(req , res)=>{
+    console.log("working")
+    const user = await User.findById(req.user);
+    console.log(user);
+    
+    res.send(req.user)
 })
+
 
 module.exports= UserRouter;
