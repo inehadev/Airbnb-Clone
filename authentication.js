@@ -61,12 +61,8 @@ UserRouter.post('/login', async (req, res) => {
         res.status(500).json({error:error.message});
     }
 
-    UserRouter.get('/profile' , userVerify, async (req,res)=>{
-        console.log("id is",req.token());
-            res.send("working");
-        
-    })
-});
+   
+})
 
 
 UserRouter.get("/profile" , userVerify , async(req , res)=>{
