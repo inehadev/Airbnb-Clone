@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
   const userVerify =async (req,res,next)=>{
-    console.log("working or not");
+   
     try {
       const token = req.header("x-auth-token");
       if(!token){
